@@ -979,7 +979,7 @@ class Document extends ParanoidModel<
         }
       }
 
-      if (!this.template && this.publishedAt && collection) {
+      if (!this.template && this.publishedAt && collection?.isActive) {
         await collection.addDocumentToStructure(this, undefined, {
           transaction,
         });
