@@ -81,10 +81,20 @@ if (
         ) => void
       ) {
         try {
-          const profile = await request(
-            env.OIDC_USERINFO_URI ?? "",
-            accessToken
-          );
+          let profile;
+          if(env.OIDC_GITHUB_ENABLED) {
+            const githubProfile = await request(
+              env.OIDC_USERINFO_URI + "/emails",
+              accessToken
+            );
+            // Get primary email
+            profile = githubProfile.find((email: any) => email.primary) ?? "";
+          } else {
+            profile = await request(
+              env.OIDC_USERINFO_URI ?? "",
+              accessToken
+            );
+          }
 
           if (!profile.email) {
             throw AuthenticationError(
@@ -130,6 +140,9 @@ if (
           const name = profile.name || username || profile.username;
           const profileId = profile.sub ? profile.sub : profile.id;
 
+          // Get avatar from profile picture if available
+          const avatarUrl = get(profile, env.OIDC_AVATAR_CLAIM);
+
           if (!name) {
             throw AuthenticationError(
               `Neither a name or username was returned in the profile parameter, but at least one is required.`
@@ -147,7 +160,7 @@ if (
             user: {
               name,
               email: profile.email,
-              avatarUrl: profile.picture,
+              avatarUrl: profile.picture || avatarUrl,
             },
             authenticationProvider: {
               name: config.id,
