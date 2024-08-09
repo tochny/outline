@@ -97,6 +97,28 @@ class OIDCPluginEnvironment extends Environment {
     allow_underscores: true,
   })
   public OIDC_LOGOUT_URI = this.toOptionalString(environment.OIDC_LOGOUT_URI);
+
+  /**
+   * The OIDC avatar field to use as the user's avatar. The default value is
+   * "picture".
+   */
+  @Public
+  @IsOptional()
+  @IsUrl({
+    require_tld: false,
+    allow_underscores: true,
+  })
+  public OIDC_AVATAR_CLAIM = this.toOptionalString(environment.OIDC_AVATAR_CLAIM);
+
+  /**
+   * GitHub OAuth flow enable flag.
+   */
+  @Public
+  @IsOptional()
+  @IsBoolean()
+  public OIDC_GITHUB_ENABLED = this.toOptionalBoolean(
+    environment.OIDC_GITHUB_ENABLED
+  );
 }
 
 export default new OIDCPluginEnvironment();
