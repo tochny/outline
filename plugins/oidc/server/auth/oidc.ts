@@ -1,24 +1,24 @@
 import passport from "@outlinewiki/koa-passport";
-import type { Context } from "koa";
-import Router from "koa-router";
-import get from "lodash/get";
-import { Strategy } from "passport-oauth2";
-import { slugifyDomain } from "@shared/utils/domains";
-import { parseEmail } from "@shared/utils/email";
 import accountProvisioner from "@server/commands/accountProvisioner";
 import {
-  OIDCMalformedUserInfoError,
   AuthenticationError,
+  OIDCMalformedUserInfoError,
 } from "@server/errors";
 import passportMiddleware from "@server/middlewares/passport";
 import { AuthenticationProvider, User } from "@server/models";
 import { AuthenticationResult } from "@server/types";
 import {
   StateStore,
-  getTeamFromContext,
   getClientFromContext,
+  getTeamFromContext,
   request,
 } from "@server/utils/passport";
+import { slugifyDomain } from "@shared/utils/domains";
+import { parseEmail } from "@shared/utils/email";
+import type { Context } from "koa";
+import Router from "koa-router";
+import get from "lodash/get";
+import { Strategy } from "passport-oauth2";
 import config from "../../plugin.json";
 import env from "../env";
 
@@ -81,19 +81,20 @@ if (
         ) => void
       ) {
         try {
-          let profile;
+          let profile = await request(
+            env.OIDC_USERINFO_URI ?? "",
+            accessToken
+          );
           if(env.OIDC_GITHUB_ENABLED) {
-            const githubProfile = await request(
-              env.OIDC_USERINFO_URI + "/emails",
+            // get primary email from github
+            const githubEmails = await request(
+              env.OIDC_USERINFO_URI + "/emails" ?? "",
               accessToken
             );
-            // Get primary email
-            profile = githubProfile.find((email: any) => email.primary) ?? "";
-          } else {
-            profile = await request(
-              env.OIDC_USERINFO_URI ?? "",
-              accessToken
-            );
+            const primaryEmail = githubEmails.find((email: any) => email.primary);
+            if(primaryEmail) {
+              profile.email = primaryEmail.email;
+            }
           }
 
           if (!profile.email) {
