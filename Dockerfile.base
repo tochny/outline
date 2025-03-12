@@ -11,6 +11,7 @@ RUN yarn install --no-optional --frozen-lockfile --network-timeout 1000000 && \
 
 COPY . .
 ARG CDN_URL
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN yarn build
 
 RUN rm -rf node_modules
