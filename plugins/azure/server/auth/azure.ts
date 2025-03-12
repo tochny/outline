@@ -54,17 +54,10 @@ if (env.AZURE_CLIENT_ID && env.AZURE_CLIENT_SECRET) {
         // https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens
         const profile = jwt.decode(params.id_token) as jwt.JwtPayload;
 
-        const [profileResponse, organizationResponse] = await Promise.all([
+        const [profileResponse] = await Promise.all([
           // Load the users profile from the Microsoft Graph API
           // https://docs.microsoft.com/en-us/graph/api/resources/users?view=graph-rest-1.0
           request("GET", `https://graph.microsoft.com/v1.0/me`, accessToken),
-          // Load the organization profile from the Microsoft Graph API
-          // https://docs.microsoft.com/en-us/graph/api/organization-get?view=graph-rest-1.0
-          request(
-            "GET",
-            `https://graph.microsoft.com/v1.0/organization`,
-            accessToken
-          ),
         ]);
 
         if (!profileResponse) {
@@ -73,18 +66,11 @@ if (env.AZURE_CLIENT_ID && env.AZURE_CLIENT_SECRET) {
           );
         }
 
-        if (!organizationResponse?.value?.length) {
-          throw MicrosoftGraphError(
-            `Unable to load organization info from Microsoft Graph API: ${organizationResponse.error?.message}`
-          );
-        }
-
-        const organization = organizationResponse.value[0];
-
         // Note: userPrincipalName is last here for backwards compatibility with
         // previous versions of Outline that did not include it.
         const email =
           profile.email ||
+          profile.unique_name ||
           profileResponse.mail ||
           profileResponse.userPrincipalName;
 
@@ -100,12 +86,11 @@ if (env.AZURE_CLIENT_ID && env.AZURE_CLIENT_SECRET) {
         const domain = parseEmail(email).domain;
         const subdomain = slugifyDomain(domain);
 
-        const teamName = organization.displayName;
         const result = await accountProvisioner({
           ip: ctx.ip,
           team: {
             teamId: team?.id,
-            name: teamName,
+            name: env.APP_NAME,
             domain,
             subdomain,
           },
