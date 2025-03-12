@@ -1,24 +1,24 @@
 import passport from "@outlinewiki/koa-passport";
+import type { Context } from "koa";
+import Router from "koa-router";
+import get from "lodash/get";
+import { Strategy } from "passport-oauth2";
+import { slugifyDomain } from "@shared/utils/domains";
+import { parseEmail } from "@shared/utils/email";
 import accountProvisioner from "@server/commands/accountProvisioner";
 import {
-  AuthenticationError,
   OIDCMalformedUserInfoError,
+  AuthenticationError,
 } from "@server/errors";
 import passportMiddleware from "@server/middlewares/passport";
 import { AuthenticationProvider, User } from "@server/models";
 import { AuthenticationResult } from "@server/types";
 import {
   StateStore,
-  getClientFromContext,
   getTeamFromContext,
+  getClientFromContext,
   request,
 } from "@server/utils/passport";
-import { slugifyDomain } from "@shared/utils/domains";
-import { parseEmail } from "@shared/utils/email";
-import type { Context } from "koa";
-import Router from "koa-router";
-import get from "lodash/get";
-import { Strategy } from "passport-oauth2";
 import config from "../../plugin.json";
 import env from "../env";
 
@@ -81,18 +81,27 @@ if (
         ) => void
       ) {
         try {
-          let profile = await request(
-            env.OIDC_USERINFO_URI ?? "",
+          // Some providers require a POST request to the userinfo endpoint, add them as exceptions here.
+          const usePostMethod = [
+            "https://api.dropboxapi.com/2/openid/userinfo",
+          ];
+
+          const profile = await request(
+            usePostMethod.includes(env.OIDC_USERINFO_URI!) ? "POST" : "GET",
+            env.OIDC_USERINFO_URI!,
             accessToken
           );
-          if(env.OIDC_GITHUB_ENABLED) {
+          if (env.OIDC_GITHUB_ENABLED) {
             // get primary email from github
             const githubEmails = await request(
-              env.OIDC_USERINFO_URI + "/emails" ?? "",
+              "GET",
+              env.OIDC_USERINFO_URI! + "/emails",
               accessToken
             );
-            const primaryEmail = githubEmails.find((email: any) => email.primary);
-            if(primaryEmail) {
+            const primaryEmail = githubEmails.find(
+              (email: any) => email.primary
+            );
+            if (primaryEmail) {
               profile.email = primaryEmail.email;
             }
           }
@@ -142,7 +151,9 @@ if (
           const profileId = profile.sub ? profile.sub : profile.id;
 
           // Get avatar from profile picture if available
-          const avatarUrl = get(profile, env.OIDC_AVATAR_CLAIM);
+          const avatarUrl = env.OIDC_AVATAR_CLAIM
+            ? get(profile, env.OIDC_AVATAR_CLAIM)
+            : null;
 
           if (!name) {
             throw AuthenticationError(

@@ -108,7 +108,9 @@ class OIDCPluginEnvironment extends Environment {
     require_tld: false,
     allow_underscores: true,
   })
-  public OIDC_AVATAR_CLAIM = this.toOptionalString(environment.OIDC_AVATAR_CLAIM);
+  public OIDC_AVATAR_CLAIM = this.toOptionalString(
+    environment.OIDC_AVATAR_CLAIM
+  );
 
   /**
    * GitHub OAuth flow enable flag.
